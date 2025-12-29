@@ -2,11 +2,11 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  getInterview,
+  getInterviewById,
   createInterview
 } = require("../controllers/interview.controller");
 
-router.get("/", getInterview);
 router.post("/", createInterview);
+router.get("/:id", getInterviewById);
 
 module.exports = router;
