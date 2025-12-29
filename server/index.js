@@ -20,6 +20,15 @@ app.get("/interviews", (req, res) => {
     });
 });
 
+app.post("/interview", (req, res) => {
+    const interviewData = req.body;
+
+    res.json({
+        message: "Interview created succesfully",
+        interview: interviewData
+    });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
