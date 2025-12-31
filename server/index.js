@@ -2,6 +2,9 @@ const express = require("express");
 
 const interviewRoutes = require("./routes/interview.routes");
 
+const { getInterviewById, updateInterviewCode } = require("./store/interview.store");
+
+
 const app = express();
 const PORT = 3000;
 
@@ -26,6 +29,7 @@ const io = new Server(server, {
  
 io.on("connection", (socket) => {
     console.log("Auser connected: ", socket.id);
+    
     socket.on("code:update", ({ interviewId, content }) => {
   const interview = getInterviewById(interviewId);
 
@@ -39,6 +43,23 @@ io.on("connection", (socket) => {
     return;
   }
 
+    // === Anti-cheat signal #1: large sudden jump ===
+  const previousLength = interview.code.length;
+  const newLength = content.length;
+
+  const delta = Math.abs(newLength - previousLength);
+
+  if (delta > 500) {
+    io.to(String(interviewId)).emit("cheat:signal", {
+      type: "LARGE_CODE_JUMP",
+      delta,
+      at: Date.now()
+    });
+  }
+
+  // Persist latest code snapshot
+  updateInterviewCode(interviewId, content);
+  
   // Broadcast code update to everyone in the room
   io.to(String(interviewId)).emit("code:sync", {
     content,
