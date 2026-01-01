@@ -3,6 +3,8 @@ const http = require("http");
 const { Server } = require("socket.io");
 
 const interviewRoutes = require("./routes/interview.routes");
+const interviewTelemetryRoutes = require("./routes/interviewTelemetry.routes");
+
 const {
   getInterviewById,
   updateInterviewCode,
@@ -18,7 +20,9 @@ app.get("/", (req, res) => {
   res.send("Interview Platform Server is running");
 });
 
+// 🔹 REST ROUTES
 app.use("/interview", interviewRoutes);
+app.use("/interview", interviewTelemetryRoutes);
 
 // ---- HTTP + SOCKET.IO SETUP ----
 const server = http.createServer(app);
@@ -74,6 +78,9 @@ io.on("connection", (socket) => {
     io.to(String(interviewId)).emit("participant:joined", { role, name });
   });
 
+  // ================================
+  // LIVE CODE UPDATE + ANTI-CHEAT
+  // ================================
   socket.on("code:update", ({ interviewId, content }) => {
     const interview = getInterviewById(interviewId);
     if (!interview || interview.ended) return;
@@ -151,7 +158,6 @@ io.on("connection", (socket) => {
 
     if (role === "candidate") {
       interview.participants.candidate = null;
-
       io.to(String(interviewId)).emit("participant:left", { role, name });
     }
   });
