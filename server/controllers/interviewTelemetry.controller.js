@@ -8,6 +8,12 @@ const getInterviewTelemetry = (req, res) => {
     return res.status(404).json({ message: "Interview not found" });
   }
 
+  const token = req.headers["x-interview-token"];
+
+  if (!token || token !== interview.recruiterToken) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
   const summary = {
     totalSignals: interview.signals.length,
     byType: interview.signals.reduce((acc, s) => {
