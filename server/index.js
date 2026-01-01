@@ -5,7 +5,8 @@ const { Server } = require("socket.io");
 const interviewRoutes = require("./routes/interview.routes");
 const {
   getInterviewById,
-  updateInterviewCode
+  updateInterviewCode,
+  addSignal
 } = require("./store/interview.store");
 
 const app = express();
@@ -32,43 +33,37 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-
-
-  
+  // ================================
+  // INTERVIEW JOIN (AUTHORITATIVE)
+  // ================================
   socket.on("interview:join", ({ interviewId, role, name }) => {
     const interview = getInterviewById(interviewId);
 
-    // Interview must exist and not be ended
     if (!interview || interview.ended) {
       socket.emit("join:error", { message: "Interview not available" });
       return;
     }
 
-    // Role must be valid
     if (!["recruiter", "candidate"].includes(role)) {
       socket.emit("join:error", { message: "Invalid role" });
       return;
     }
 
-    // Role must not already be taken
     if (interview.participants[role]) {
       socket.emit("join:error", { message: `${role} already joined` });
       return;
     }
 
-    // Bind identity to socket (CRITICAL)
+    // Bind identity to socket
     socket.interviewId = interviewId;
     socket.role = role;
     socket.name = name;
 
-    // Update interview state
     interview.participants[role] = { name };
-
-    // Join socket.io room
     socket.join(String(interviewId));
 
-    // 🔹 PART C — Sync existing code to late joiner
-    if (interview.code && interview.code.length > 0) {
+    // Sync existing code to late joiner
+    if (interview.code.length > 0) {
       socket.emit("code:sync", {
         content: interview.code,
         updatedBy: "server",
@@ -76,36 +71,52 @@ io.on("connection", (socket) => {
       });
     }
 
-    // Notify others (FACT, not request)
-    io.to(String(interviewId)).emit("participant:joined", {
-      role,
-      name
-    });
+    io.to(String(interviewId)).emit("participant:joined", { role, name });
   });
 
-  // ================================
-  // LIVE CODE UPDATE + ANTI-CHEAT
-  // ================================
   socket.on("code:update", ({ interviewId, content }) => {
     const interview = getInterviewById(interviewId);
-
-    // Interview must exist
     if (!interview || interview.ended) return;
-
-    // Only candidate can send code
     if (socket.role !== "candidate") return;
 
-    // Anti-cheat signal #1: large sudden jump
-    const previousLength = interview.code.length;
-    const newLength = content.length;
-    const delta = Math.abs(newLength - previousLength);
+    const now = Date.now();
+    const lastTime = interview.codeMeta.lastUpdatedAt;
+    const lastLength = interview.codeMeta.lastLength;
 
-    if (delta > 500) {
-      io.to(String(interviewId)).emit("cheat:signal", {
-        type: "LARGE_CODE_JUMP",
-        delta,
-        at: Date.now()
-      });
+    // --- Behavioral Signal 1: Unnatural typing speed ---
+    if (lastTime) {
+      const timeDiff = now - lastTime;
+      const lengthDiff = content.length - lastLength;
+
+      if (timeDiff < 2000 && lengthDiff > 300) {
+        const signal = {
+          type: "UNNATURAL_TYPING_SPEED",
+          charsAdded: lengthDiff,
+          timeMs: timeDiff,
+          at: now
+        };
+
+        addSignal(interviewId, signal);
+        io.to(String(interviewId)).emit("cheat:signal", signal);
+      }
+    }
+
+    // --- Behavioral Signal 2: Idle then large output ---
+    if (lastTime) {
+      const idleTime = now - lastTime;
+      const outputJump = Math.abs(content.length - lastLength);
+
+      if (idleTime > 15000 && outputJump > 200) {
+        const signal = {
+          type: "IDLE_THEN_LARGE_OUTPUT",
+          idleMs: idleTime,
+          charsAdded: outputJump,
+          at: now
+        };
+
+        addSignal(interviewId, signal);
+        io.to(String(interviewId)).emit("cheat:signal", signal);
+      }
     }
 
     // Persist authoritative snapshot
@@ -115,7 +126,7 @@ io.on("connection", (socket) => {
     io.to(String(interviewId)).emit("code:sync", {
       content,
       updatedBy: socket.name,
-      timestamp: Date.now()
+      timestamp: now
     });
   });
 
@@ -129,7 +140,6 @@ io.on("connection", (socket) => {
     const interview = getInterviewById(interviewId);
     if (!interview) return;
 
-    // Recruiter disconnects → interview ends
     if (role === "recruiter") {
       interview.ended = true;
 
@@ -139,14 +149,10 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Candidate disconnects → notify recruiter
     if (role === "candidate") {
       interview.participants.candidate = null;
 
-      io.to(String(interviewId)).emit("participant:left", {
-        role,
-        name
-      });
+      io.to(String(interviewId)).emit("participant:left", { role, name });
     }
   });
 });
