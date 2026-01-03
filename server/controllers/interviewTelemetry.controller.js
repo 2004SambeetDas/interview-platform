@@ -1,4 +1,4 @@
-const { getInterviewById } = require("../store/interview.store");
+const { getInterviewById } = require("../repository/interview.repository");
 
 const getInterviewTelemetry = (req, res) => {
   const interviewId = Number(req.params.id);
