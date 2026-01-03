@@ -4,7 +4,7 @@ const router = express.Router();
 const {
   createInterview,
   getInterviewById
-} = require("../store/interview.store");
+} = require("../repository/interview.repository");
 
 // CREATE INTERVIEW
 router.post("/", (req, res) => {
@@ -12,7 +12,9 @@ router.post("/", (req, res) => {
 
   res.status(201).json({
     message: "Interview created successfully",
-    interview
+    interviewId: interview.id,
+    recruiterToken: interview.recruiterToken,
+    candidateToken: interview.candidateToken
   });
 });
 
