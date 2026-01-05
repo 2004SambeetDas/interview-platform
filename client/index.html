@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Interview Platform</title>
+</head>
+<body>
+
+  <h2>Join Interview</h2>
+
+  <input id="interviewId" placeholder="Interview ID" />
+  <input id="name" placeholder="Your Name" />
+  <input id="token" placeholder="Access Token" />
+
+  <select id="role">
+    <option value="candidate">Candidate</option>
+    <option value="recruiter">Recruiter</option>
+  </select>
+
+  <button id="joinBtn">Join</button>
+
+  <hr />
+
+  <h3>Code Editor</h3>
+  <textarea id="editor" rows="20" cols="80"></textarea>
+
+  <h3>Events</h3>
+  <pre id="log"></pre>
+
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
