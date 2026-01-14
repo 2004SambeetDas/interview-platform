@@ -1,4 +1,4 @@
-const socket = io("http://localhost:3000");
+const socket = io("http://localhost:4000");
 
 const log = document.getElementById("log");
 const editor = document.getElementById("editor");
