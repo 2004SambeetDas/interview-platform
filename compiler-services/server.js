@@ -29,6 +29,10 @@ if (language === "python") {
   return res.status(400).json({ message: "Unsupported language" });
 }
 
+const files =
+    typeof config.files === "function"
+      ? config.files(code)
+      : { [config.filename]: code };
 
   try {
     const result = await runInDocker({
