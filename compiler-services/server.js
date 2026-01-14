@@ -3,6 +3,7 @@ const { runInDocker } = require("./runners/dockerRunner");
 const python = require("./languages/python");
 const c = require("./languages/c");
 const cpp = require("./languages/cpp");
+const java = require("./languages/java");
 
 const app = express();
 app.use(express.json());
@@ -22,7 +23,9 @@ if (language === "python") {
   config = c;
 } else if (language === "cpp") {
   config = cpp;
-} else {
+} else if (language === "java") {
+  config = java;
+}  else {
   return res.status(400).json({ message: "Unsupported language" });
 }
 
