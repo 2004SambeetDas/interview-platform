@@ -1,5 +1,5 @@
 module.exports = {
-  image: "openjdk:21-slim",
+  image: "openjdk:21",
   files: (code) => ({
     "Main.java": code
   }),
