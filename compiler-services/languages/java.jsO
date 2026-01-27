@@ -1,0 +1,11 @@
+module.exports = {
+  image: "eclipse-temurin:21-jdk",
+  files: (code) => ({
+    "Main.java": code
+  }),
+  command: [
+    "sh",
+    "-c",
+    "javac Main.java && java Main"
+  ]
+};
